@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg_dark">#121212</color>
+    <color name="topbar_bg">#1E1E1E</color>
+    <color name="user_tag">#4FC3F7</color>
+    <color name="ai_tag">#81C784</color>
+    <color name="text_white">#E0E0E0</color>
+    <color name="text_gray">#9E9E9E</color>
+    <color name="online_green">#00E676</color>
+    <color name="offline_red">#FF5252</color>
+    <color name="input_bg">#2A2A2A</color>
+</resources>

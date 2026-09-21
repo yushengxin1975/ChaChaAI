@@ -1,0 +1,24 @@
+# Build outputs
+bin/
+gen/
+*.class
+*.dex
+classes.dex
+*.apk.idsig
+
+# Keystores & sensitive credentials
+*.keystore
+*.jks
+*.pem
+
+# IDE & Editor files
+.idea/
+*.iml
+.vscode/
+*.swp
+*~
+
+# Temporary files
+*.log
+*.tmp
+*.raw

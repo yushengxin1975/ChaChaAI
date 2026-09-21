@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="wrap_content"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="8dp">
+
+        <!-- 聊天字号放在最顶端，打开设置第一眼就能看到 -->
+        <TextView
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="聊天字号大小 (点击快捷按钮)"
+            android:textStyle="bold"
+            android:textColor="#4FC3F7"
+            android:textSize="13sp" />
+
+        <LinearLayout
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="4dp">
+
+            <Button
+                android:id="@+id/btn_font_16"
+                android:layout_width="0dp"
+                android:layout_height="32dp"
+                android:layout_weight="1"
+                android:text="16"
+                android:textSize="11sp" />
+
+            <Button
+                android:id="@+id/btn_font_18"
+                android:layout_width="0dp"
+                android:layout_height="32dp"
+                android:layout_weight="1"
+                android:layout_marginLeft="2dp"
+                android:text="18"
+                android:textSize="11sp" />
+
+            <Button
+                android:id="@+id/btn_font_20"
+                android:layout_width="0dp"
+                android:layout_height="32dp"
+                android:layout_weight="1"
+                android:layout_marginLeft="2dp"
+                android:text="20"
+                android:textSize="11sp" />
+
+            <Button
+                android:id="@+id/btn_font_22"
+                android:layout_width="0dp"
+                android:layout_height="32dp"
+                android:layout_weight="1"
+                android:layout_marginLeft="2dp"
+                android:text="22"
+                android:textSize="11sp" />
+
+            <Button
+                android:id="@+id/btn_font_24"
+                android:layout_width="0dp"
+                android:layout_height="32dp"
+                android:layout_weight="1"
+                android:layout_marginLeft="2dp"
+                android:text="24"
+                android:textSize="11sp" />
+
+            <Button
+                android:id="@+id/btn_font_28"
+                android:layout_width="0dp"
+                android:layout_height="32dp"
+                android:layout_weight="1"
+                android:layout_marginLeft="2dp"
+                android:text="28"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <EditText
+            android:id="@+id/et_font_size"
+            android:layout_width="fill_parent"
+            android:layout_height="34dp"
+            android:layout_marginTop="3dp"
+            android:textSize="13sp"
+            android:inputType="number"
+            android:singleLine="true" />
+
+        <!-- 认证 Token -->
+        <TextView
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="认证 Token (秘钥)"
+            android:textSize="12sp" />
+
+        <EditText
+            android:id="@+id/et_token"
+            android:layout_width="fill_parent"
+            android:layout_height="34dp"
+            android:textSize="12sp"
+            android:hint="请输入访问密钥"
+            android:singleLine="true" />
+
+        <!-- 服务器地址 -->
+        <TextView
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="服务器地址"
+            android:textSize="12sp" />
+
+        <EditText
+            android:id="@+id/et_server_url"
+            android:layout_width="fill_parent"
+            android:layout_height="34dp"
+            android:textSize="12sp"
+            android:hint="http://your-server-ip:80"
+            android:singleLine="true" />
+
+    </LinearLayout>
+</ScrollView>
