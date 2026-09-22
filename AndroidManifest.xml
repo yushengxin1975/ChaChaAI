@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.chacha.ai"
-    android:versionCode="20260923"
-    android:versionName="2.3">
+    android:versionCode="20260924"
+    android:versionName="2.4">
 
     <uses-sdk android:minSdkVersion="10" android:targetSdkVersion="28" />
     <uses-permission android:name="android.permission.INTERNET" />

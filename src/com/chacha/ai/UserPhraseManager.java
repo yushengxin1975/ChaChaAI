@@ -30,14 +30,30 @@ public class UserPhraseManager {
         public String pinyin;
         public String initials;
         public int count;
+        public int missCount;
         public long timestamp;
 
-        public Phrase(String word, String pinyin, String initials, int count, long timestamp) {
+        public Phrase(String word, String pinyin, String initials, int count, int missCount, long timestamp) {
             this.word = word;
             this.pinyin = pinyin;
             this.initials = initials;
             this.count = count;
+            this.missCount = missCount;
             this.timestamp = timestamp;
+        }
+
+        public Phrase(String word, String pinyin, String initials, int count, long timestamp) {
+            this(word, pinyin, initials, count, 0, timestamp);
+        }
+
+        public int getEffectiveScore() {
+            // 有效分值：选词次数 - (连续未选忽略次数 * 2)
+            return count - (missCount * 2);
+        }
+
+        public boolean isDegraded() {
+            // 连续 2 次及以上在对应拼音下被用户忽略，判定为动态降级
+            return missCount >= 2;
         }
     }
 
@@ -119,6 +135,7 @@ public class UserPhraseManager {
                     String pinyin = obj.optString("pinyin", "");
                     String initials = obj.optString("initials", "");
                     int count = obj.optInt("count", 1);
+                    int missCount = obj.optInt("missCount", 0);
                     long ts = obj.optLong("timestamp", 0);
                     if (word.length() > 0) {
                         boolean exists = false;
@@ -126,12 +143,13 @@ public class UserPhraseManager {
                             if (p.word.equals(word)) {
                                 exists = true;
                                 if (count > p.count) p.count = count;
+                                p.missCount = missCount;
                                 if (ts > p.timestamp) p.timestamp = ts;
                                 break;
                             }
                         }
                         if (!exists) {
-                            phraseList.add(new Phrase(word, pinyin, initials, count, ts));
+                            phraseList.add(new Phrase(word, pinyin, initials, count, missCount, ts));
                         }
                     }
                 }
@@ -160,6 +178,7 @@ public class UserPhraseManager {
                 obj.put("pinyin", p.pinyin);
                 obj.put("initials", p.initials);
                 obj.put("count", p.count);
+                obj.put("missCount", p.missCount);
                 obj.put("timestamp", p.timestamp);
                 arr.put(obj);
             }
@@ -217,6 +236,7 @@ public class UserPhraseManager {
                 if (!pinyin.isEmpty()) p.pinyin = pinyin;
                 if (!initials.isEmpty()) p.initials = initials;
                 p.count++;
+                p.missCount = 0; // 重新使用，消除忽略惩罚
                 p.timestamp = System.currentTimeMillis();
                 sortPhrases();
                 save(context);
@@ -224,7 +244,8 @@ public class UserPhraseManager {
             }
         }
 
-        phraseList.add(new Phrase(word, pinyin, initials, 1, System.currentTimeMillis()));
+        // 新造词赋予初始权重 3 与 0 忽略数，确保初始排在第 1 位
+        phraseList.add(new Phrase(word, pinyin, initials, 3, 0, System.currentTimeMillis()));
         sortPhrases();
         save(context);
     }
@@ -247,7 +268,7 @@ public class UserPhraseManager {
         return new ArrayList<Phrase>(phraseList);
     }
 
-    public synchronized List<String> matchPhrases(Context context, String queryPinyin) {
+    public synchronized List<Phrase> getMatchingPhrases(Context context, String queryPinyin) {
         if (context == null || queryPinyin == null || queryPinyin.trim().isEmpty()) {
             return Collections.emptyList();
         }
@@ -255,29 +276,37 @@ public class UserPhraseManager {
         String q = queryPinyin.toLowerCase().replaceAll("[^a-z]", "");
         if (q.isEmpty()) return Collections.emptyList();
 
-        List<String> exactMatches = new ArrayList<String>();
-        List<String> prefixMatches = new ArrayList<String>();
+        List<Phrase> exactMatches = new ArrayList<Phrase>();
+        List<Phrase> prefixMatches = new ArrayList<Phrase>();
 
         for (Phrase p : phraseList) {
-            // 1. 完全精确匹配全拼或简拼（最高优先级）
             if ((p.pinyin != null && p.pinyin.equals(q)) ||
                 (p.initials != null && p.initials.equals(q))) {
-                if (!exactMatches.contains(p.word)) {
-                    exactMatches.add(p.word);
+                if (!exactMatches.contains(p)) {
+                    exactMatches.add(p);
                 }
-            }
-            // 2. 前缀匹配（次优先级）
-            else if ((p.pinyin != null && p.pinyin.startsWith(q)) ||
-                     (p.initials != null && p.initials.startsWith(q))) {
-                if (!exactMatches.contains(p.word) && !prefixMatches.contains(p.word)) {
-                    prefixMatches.add(p.word);
+            } else if ((p.pinyin != null && p.pinyin.startsWith(q)) ||
+                       (p.initials != null && p.initials.startsWith(q))) {
+                if (!exactMatches.contains(p) && !prefixMatches.contains(p)) {
+                    prefixMatches.add(p);
                 }
             }
         }
 
-        List<String> results = new ArrayList<String>(exactMatches);
+        List<Phrase> results = new ArrayList<Phrase>(exactMatches);
         results.addAll(prefixMatches);
         return results;
+    }
+
+    public synchronized List<String> matchPhrases(Context context, String queryPinyin) {
+        List<Phrase> list = getMatchingPhrases(context, queryPinyin);
+        List<String> words = new ArrayList<String>();
+        for (Phrase p : list) {
+            if (!words.contains(p.word)) {
+                words.add(p.word);
+            }
+        }
+        return words;
     }
 
     public synchronized void recordUsage(Context context, String word) {
@@ -286,6 +315,7 @@ public class UserPhraseManager {
         for (Phrase p : phraseList) {
             if (p.word.equals(word)) {
                 p.count++;
+                p.missCount = 0; // 用户选中该自造词，重置未选计数，恢复顶级权重！
                 p.timestamp = System.currentTimeMillis();
                 sortPhrases();
                 save(context);
@@ -294,12 +324,38 @@ public class UserPhraseManager {
         }
     }
 
+    /**
+     * 动态降级：当用户输入了该拼音却连续选了其他词时，记录未选忽略次数
+     */
+    public synchronized void recordMiss(Context context, String pinyin, String chosenWord) {
+        if (context == null || pinyin == null || pinyin.trim().isEmpty()) return;
+        load(context);
+        String q = pinyin.toLowerCase().replaceAll("[^a-z]", "");
+        if (q.isEmpty()) return;
+
+        boolean changed = false;
+        for (Phrase p : phraseList) {
+            boolean matches = (p.pinyin != null && p.pinyin.equals(q)) ||
+                              (p.initials != null && p.initials.equals(q));
+            if (matches && (chosenWord == null || !p.word.equals(chosenWord))) {
+                p.missCount++;
+                changed = true;
+            }
+        }
+        if (changed) {
+            sortPhrases();
+            save(context);
+        }
+    }
+
     private void sortPhrases() {
         Collections.sort(phraseList, new Comparator<Phrase>() {
             @Override
             public int compare(Phrase o1, Phrase o2) {
-                if (o1.count != o2.count) {
-                    return o2.count - o1.count;
+                int score1 = o1.getEffectiveScore();
+                int score2 = o2.getEffectiveScore();
+                if (score1 != score2) {
+                    return score2 - score1;
                 }
                 return Long.compare(o2.timestamp, o1.timestamp);
             }

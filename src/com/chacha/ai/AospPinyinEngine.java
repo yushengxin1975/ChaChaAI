@@ -173,32 +173,58 @@ public class AospPinyinEngine {
                 } catch (Exception ignored) {}
             }
 
-            // 0. 最高优先级：匹配用户自造词库（带 ★ 标识）
-            List<String> customWords = (appContext != null) ?
-                    UserPhraseManager.getInstance().matchPhrases(appContext, pinyin) :
-                    Collections.<String>emptyList();
+            // 0. 读取用户自造词库并根据连续被忽略情况动态划分为：活跃自造词 vs 降级自造词
+            List<UserPhraseManager.Phrase> customPhrases = (appContext != null) ?
+                    UserPhraseManager.getInstance().getMatchingPhrases(appContext, pinyin) :
+                    Collections.<UserPhraseManager.Phrase>emptyList();
 
-            List<String> finalResults = new ArrayList<String>();
-            // 1. 自造词置顶（如果用户此前已自造该词组，强制绝对置顶）
-            for (String cw : customWords) {
-                if (!finalResults.contains("★" + cw)) {
-                    finalResults.add("★" + cw);
+            List<String> activeCustom = new ArrayList<String>();
+            List<String> degradedCustom = new ArrayList<String>();
+            for (UserPhraseManager.Phrase p : customPhrases) {
+                if (p.isDegraded()) {
+                    degradedCustom.add("★" + p.word);
+                } else {
+                    activeCustom.add("★" + p.word);
                 }
             }
 
-            // 2. 动态词频调整：读取该拼音下用户以往的选词频率
+            // 动态词频调整：读取该拼音下用户以往的选词频率
+            List<String> userFreqWords = new ArrayList<String>();
             if (freqPrefs != null) {
                 String pyKey = pinyin.toLowerCase();
                 String record = freqPrefs.getString("py_" + pyKey, "");
                 List<FreqEntry> userEntries = parseFreqEntries(record);
                 for (FreqEntry entry : userEntries) {
-                    if (!finalResults.contains(entry.word)) {
-                        finalResults.add(entry.word);
+                    if (!userFreqWords.contains(entry.word)) {
+                        userFreqWords.add(entry.word);
                     }
                 }
             }
 
-            // 3. 原生词库候选词与首音节单字精细编排
+            List<String> finalResults = new ArrayList<String>();
+
+            // 1. 活跃自造词置顶（初始及经常使用的自造词优先排在最前）
+            for (String ac : activeCustom) {
+                if (!finalResults.contains(ac)) {
+                    finalResults.add(ac);
+                }
+            }
+
+            // 2. 用户选过的高频词（若自造词已降级，用户实际偏好选择的词将顺理成章升至首位）
+            for (String ufw : userFreqWords) {
+                if (!finalResults.contains(ufw)) {
+                    finalResults.add(ufw);
+                }
+            }
+
+            // 3. 动态降级自造词（连续 2 次以上被忽略的自造词退居用户高频词之后，不再霸占首位）
+            for (String dc : degradedCustom) {
+                if (!finalResults.contains(dc)) {
+                    finalResults.add(dc);
+                }
+            }
+
+            // 4. 原生词库候选词与首音节单字精细编排
             if (syls.size() > 1) {
                 // 多音节输入时（如 feisi）：
                 // 先放入最多 2 个原生整词候选（若词库有），随后立即放置首音节单字（如 飞、非、肥、废...）
@@ -252,9 +278,13 @@ public class AospPinyinEngine {
         // 如果包含自造词标识 ★，予以去除
         String pureWord = word.startsWith("★") ? word.substring(1) : word;
 
-        // 1. 如果是自造词，更新自造词库的使用频次
-        if (word.startsWith("★") && appContext != null) {
-            UserPhraseManager.getInstance().recordUsage(appContext, pureWord);
+        // 1. 如果是自造词，更新自造词库的使用频次；若选了其他词，记录自造词被忽略（动态降级机制）
+        if (appContext != null) {
+            if (word.startsWith("★")) {
+                UserPhraseManager.getInstance().recordUsage(appContext, pureWord);
+            } else {
+                UserPhraseManager.getInstance().recordMiss(appContext, pinyin, pureWord);
+            }
         }
 
         // 2. 连续选字智能自造词学习（4秒内连续选字自动组成新词组）
