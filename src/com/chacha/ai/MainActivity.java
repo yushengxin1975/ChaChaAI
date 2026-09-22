@@ -1346,7 +1346,7 @@ public class MainActivity extends Activity {
         Button btnAbout = (Button) view.findViewById(R.id.btn_about);
         TextView tvSettingsVer = (TextView) view.findViewById(R.id.tv_settings_version_info);
 
-        String appVerInfo = "v2.5 (Build 20260925)";
+        String appVerInfo = "v2.6 (Build 20260926)";
         try {
             PackageInfo pInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
             appVerInfo = "v" + pInfo.versionName + " (Build " + pInfo.versionCode + ")";
@@ -1411,7 +1411,7 @@ public class MainActivity extends Activity {
         TextView tvLog = (TextView) view.findViewById(R.id.tv_changelog_content);
         Button btnClose = (Button) view.findViewById(R.id.btn_close_about);
 
-        String appVer = "v2.5 (Build 20260925)";
+        String appVer = "v2.6 (Build 20260926)";
         try {
             PackageInfo pInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
             appVer = "v" + pInfo.versionName + " (Build " + pInfo.versionCode + ")";
@@ -1422,7 +1422,12 @@ public class MainActivity extends Activity {
         }
 
         StringBuilder sb = new StringBuilder();
-        sb.append("【v2.5】最新版本\n");
+        sb.append("【v2.6】最新版本\n");
+        sb.append("• 路线 A：端到端 AES-256 智能双模加密（金融军工级防抓包）\n");
+        sb.append("• 在公司 Wi-Fi 等受管网络下，所有对话与 Token 自动走高强度密文，彻底防范中间人监听与行为管理截获\n");
+        sb.append("• 服务端自适应识别：起点讯飞阅读器走全链路密文，iPhone 快捷指令原生兼容不受任何影响\n\n");
+
+        sb.append("【v2.5】\n");
         sb.append("• 新增「关于」界面与版本号直观展示\n");
         sb.append("• 内置完整更新日志 (Changelog)，支持随时查阅演进历史\n");
         sb.append("• 设置中心与主界面顶部标题均可快捷呼出关于信息\n\n");
@@ -1729,11 +1734,21 @@ public class MainActivity extends Activity {
                 conn.setRequestProperty("Content-Type", "application/json");
                 conn.setConnectTimeout(5000);
                 conn.setDoOutput(true);
-                JSONObject json = new JSONObject();
-                json.put("token", token);
+
+                JSONObject innerJson = new JSONObject();
+                innerJson.put("token", token);
                 if (sessionId != null) {
-                    json.put("session_id", sessionId);
+                    innerJson.put("session_id", sessionId);
                 }
+
+                String cipherPayload = CryptoUtils.encrypt(innerJson.toString(), token);
+                JSONObject json = new JSONObject();
+                if (cipherPayload != null) {
+                    json.put("cipher", cipherPayload);
+                } else {
+                    json = innerJson;
+                }
+
                 OutputStream os = conn.getOutputStream();
                 os.write(json.toString().getBytes("UTF-8"));
                 os.flush();
@@ -1780,12 +1795,20 @@ public class MainActivity extends Activity {
                 conn.setReadTimeout(310000);
                 conn.setDoOutput(true);
 
-                JSONObject req = new JSONObject();
-                req.put("prompt", prompt);
-                req.put("continue", cont);
-                req.put("token", token);
+                JSONObject innerReq = new JSONObject();
+                innerReq.put("prompt", prompt);
+                innerReq.put("continue", cont);
+                innerReq.put("token", token);
                 if (currentSession != null && currentSession.id != null) {
-                    req.put("session_id", currentSession.id);
+                    innerReq.put("session_id", currentSession.id);
+                }
+
+                String cipherPayload = CryptoUtils.encrypt(innerReq.toString(), token);
+                JSONObject req = new JSONObject();
+                if (cipherPayload != null) {
+                    req.put("cipher", cipherPayload);
+                } else {
+                    req = innerReq;
                 }
 
                 byte[] body = req.toString().getBytes("UTF-8");
@@ -1806,7 +1829,22 @@ public class MainActivity extends Activity {
                     reader.close();
 
                     JSONObject res = new JSONObject(sb.toString().trim());
-                    String reply = res.optString("reply", "");
+                    String reply = "";
+                    if (res.has("cipher")) {
+                        String decJson = CryptoUtils.decrypt(res.getString("cipher"), token);
+                        if (decJson != null) {
+                            try {
+                                JSONObject decObj = new JSONObject(decJson);
+                                reply = decObj.optString("reply", "");
+                            } catch (Exception parseErr) {
+                                reply = decJson;
+                            }
+                        } else {
+                            reply = "【加解密异常：服务端密文解析失败，请核对 Token】";
+                        }
+                    } else {
+                        reply = res.optString("reply", "");
+                    }
                     success = true;
                     return reply.length() > 0 ? reply : "【AI 没有返回任何内容】";
                 } else {

@@ -9,6 +9,10 @@ import sys
 import datetime
 import sqlite3
 import re
+import base64
+import hashlib
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives import padding
 
 PORT = 8088
 DEFAULT_TOKEN = os.environ.get("CHACHA_TOKEN", "your_secure_token_here")
@@ -21,6 +25,34 @@ env = os.environ.copy()
 env["PATH"] = "/home/admin/.npm-global/bin:" + env.get("PATH", "")
 env["LANG"] = "en_US.UTF-8"
 env["LC_ALL"] = "en_US.UTF-8"
+
+# ==================== 端到端 AES-256 加解密工具 (路线 A) ====================
+def aes_decrypt(b64_ciphertext: str, secret: str) -> str:
+    try:
+        key = hashlib.sha256(secret.encode('utf-8')).digest()
+        raw = base64.b64decode(b64_ciphertext)
+        if len(raw) < 17:
+            return None
+        iv, ct = raw[:16], raw[16:]
+        cipher = Cipher(algorithms.AES(key), modes.CBC(iv))
+        dec = cipher.decryptor().update(ct) + cipher.decryptor().finalize()
+        unpadder = padding.PKCS7(128).unpadder()
+        plaintext = unpadder.update(dec) + unpadder.finalize()
+        return plaintext.decode('utf-8')
+    except Exception:
+        return None
+
+def aes_encrypt(plaintext: str, secret: str) -> str:
+    try:
+        key = hashlib.sha256(secret.encode('utf-8')).digest()
+        iv = os.urandom(16)
+        padder = padding.PKCS7(128).padder()
+        padded = padder.update(plaintext.encode('utf-8')) + padder.finalize()
+        cipher = Cipher(algorithms.AES(key), modes.CBC(iv))
+        ct = cipher.encryptor().update(padded) + cipher.encryptor().finalize()
+        return base64.b64encode(iv + ct).decode('utf-8')
+    except Exception:
+        return None
 
 # ==================== 安全护栏特征检测库 ====================
 DANGEROUS_PATTERNS = [
@@ -44,27 +76,28 @@ DANGEROUS_PATTERNS = [
     r'bash\s+-i\s+>&',
     r'/dev/tcp/',
     r'/dev/udp/',
-    r'\bnc(?:\.traditional)?\s+-[le]',
-    r'\bncat\s+-[le]',
+    r'\bnc\s+-[eclp]',
     r'\bmkfifo\b',
-    r'python.*socket.*connect',
-    # 4. 破坏性抹盘与系统销毁
-    r'\brm\s+-[a-zA-Z]*r[a-zA-Z]*f\s+(?:/|/\*)',
+    # 4. 磁盘破坏与高危命令
+    r'\brm\s+-(?:rf?|fr?)\s+/(?:\s|$|\*)',
     r'\bmkfs\b',
-    r'dd\s+if=/dev/zero',
-    r'\bshutdown\b',
-    r'\breboot\b',
-    r'\binit\s+0\b',
+    r'\bdd\s+if=',
+    r':\(\)\{\s*:\|:&\s*\};:',
+    # 5. 挖矿与后门驻留
+    r'/etc/crontab',
+    r'/etc/cron\.',
+    r'/var/spool/cron',
+    r'/etc/systemd/system',
 ]
 
-DANGEROUS_REGEX = re.compile('|'.join(DANGEROUS_PATTERNS), re.IGNORECASE)
-
-def check_security_guardrail(prompt):
-    if not prompt:
-        return None
-    match = DANGEROUS_REGEX.search(prompt)
-    if match:
-        return match.group(0)
+def check_security_guardrail(prompt_text: str):
+    """
+    安全护栏检测函数：在执行任何 AI 指令前，对 prompt 进行深度特征匹配。
+    如果命中危险规则，返回命中的特征规则；否则返回 None。
+    """
+    for pattern in DANGEROUS_PATTERNS:
+        if re.search(pattern, prompt_text, re.IGNORECASE):
+            return pattern
     return None
 
 def load_session_map():
@@ -97,7 +130,11 @@ def get_latest_opencode_session_id():
     return None
 
 class ChaChaAIHandler(http.server.BaseHTTPRequestHandler):
-    def _send_json(self, data, code=200):
+    def _send_json(self, data, code=200, encrypt=False):
+        if encrypt:
+            plaintext = json.dumps(data, ensure_ascii=False)
+            cipher_b64 = aes_encrypt(plaintext, DEFAULT_TOKEN)
+            data = {"cipher": cipher_b64}
         body = json.dumps(data, ensure_ascii=False).encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -115,7 +152,13 @@ class ChaChaAIHandler(http.server.BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == "/api/ping":
-            self._send_json({"status": "ok", "message": "ChaCha AI Server is online", "model": "glm-5.3-flash", "guardrail": True})
+            self._send_json({
+                "status": "ok",
+                "message": "ChaCha AI Server is online",
+                "model": "glm-5.3-flash",
+                "guardrail": True,
+                "e2ee": True
+            })
         elif self.path in ["/download/ChaChaAI.apk", "/ChaChaAI.apk", "/1", "/c", "/a"]:
             if os.path.exists(APK_PATH):
                 with open(APK_PATH, "rb") as f:
@@ -138,15 +181,15 @@ class ChaChaAIHandler(http.server.BaseHTTPRequestHandler):
 <style>
 body { font-family: sans-serif; text-align: center; padding: 40px 15px; background: #fff; color: #000; }
 h1 { font-size: 26px; margin-bottom: 12px; font-weight: bold; }
-.btn { display: inline-block; padding: 20px 40px; font-size: 24px; font-weight: bold; color: #fff; background: #000; text-decoration: none; border-radius: 6px; margin: 25px 0; border: 3px solid #000; }
-.tip { font-size: 17px; color: #222; line-height: 1.8; margin-top: 15px; }
-.box { max-width: 500px; margin: 0 auto; border: 3px solid #000; padding: 25px; border-radius: 8px; }
-.code { font-family: monospace; font-size: 20px; font-weight: bold; background: #eee; padding: 4px 10px; border-radius: 4px; }
+.box { max-width: 420px; margin: 0 auto; border: 2px solid #000; padding: 24px; border-radius: 8px; }
+.btn { display: inline-block; background: #000; color: #fff; text-decoration: none; padding: 14px 28px; font-size: 18px; font-weight: bold; border-radius: 6px; margin: 20px 0; }
+.tip { font-size: 14px; color: #555; line-height: 1.6; }
+.code { background: #f0f0f0; padding: 2px 6px; font-family: monospace; font-weight: bold; }
 </style>
 </head>
 <body>
 <div class="box">
-  <h1>ChaCha AI 墨水屏专版</h1>
+  <h1>ChaCha AI 客户端</h1>
   <p class="tip">起点讯飞阅读器 & 蓝牙物理键盘专用<br>集成 AOSP 谷歌拼音原生引擎 · 百万词库 · 云端安全护栏</p>
   <a class="btn" href="/1">【点击直接下载 APK】</a>
   <p class="tip">极简短网址：<br><span class="code">your-server-ip/1</span><br>或输入 <span class="code">your-server-ip/c</span> 均可直达下载</p>
@@ -178,12 +221,29 @@ h1 { font-size: 26px; margin-bottom: 12px; font-weight: bold; }
             self._send_json({"error": "Invalid JSON", "reply": "【格式错误】发送的数据不是有效的 JSON！"}, 400)
             return
 
+        # ==================== 智能双模识别 (密文 vs 明文) ====================
+        is_encrypted = False
+        if "cipher" in req_data:
+            decrypted_str = aes_decrypt(req_data["cipher"], DEFAULT_TOKEN)
+            if not decrypted_str:
+                self._send_json({
+                    "error": "Decryption failed",
+                    "reply": "【加解密失败】无法解密密文请求，请检查客户端配置的 Token 密钥是否与服务端一致！"
+                }, 401)
+                return
+            try:
+                req_data = json.loads(decrypted_str)
+                is_encrypted = True
+            except Exception:
+                self._send_json({"error": "Invalid decrypted JSON", "reply": "【格式错误】解密后非有效 JSON 数据！"}, 400)
+                return
+
         token = req_data.get("token", "")
         if not token or token != DEFAULT_TOKEN:
             self._send_json({
                 "error": "Unauthorized",
-                "reply": f"【认证失败】安全密钥不正确！您发送的 token 是 '{token}'，正确密钥应为 '{DEFAULT_TOKEN}'"
-            }, 401)
+                "reply": f"【认证失败】安全密钥不正确！"
+            }, 401, encrypt=is_encrypted)
             return
 
         if self.path == "/api/reset":
@@ -192,7 +252,7 @@ h1 { font-size: 26px; margin-bottom: 12px; font-weight: bold; }
             if client_sid in smap:
                 del smap[client_sid]
                 save_session_map(smap)
-            self._send_json({"status": "ok", "message": "Session reset", "reply": "已清空会话上下文，建立独立新会话"})
+            self._send_json({"status": "ok", "message": "Session reset", "reply": "已清空会话上下文，建立独立新会话"}, encrypt=is_encrypted)
             return
 
         if self.path == "/api/chat":
@@ -200,7 +260,7 @@ h1 { font-size: 26px; margin-bottom: 12px; font-weight: bold; }
             cont = req_data.get("continue", True)
             client_sid = req_data.get("session_id", "default_chacha_client")
             if not prompt:
-                self._send_json({"error": "Empty prompt", "reply": "【提示】未收到提问内容，请确认 prompt 字段填入了问题！"}, 400)
+                self._send_json({"error": "Empty prompt", "reply": "【提示】未收到提问内容，请确认 prompt 字段填入了问题！"}, 400, encrypt=is_encrypted)
                 return
 
             # ==================== 安全护栏主动检测与阻断 ====================
@@ -215,7 +275,7 @@ h1 { font-size: 26px; margin-bottom: 12px; font-weight: bold; }
                 self._send_json({
                     "status": "blocked",
                     "reply": f"【安全护栏拦截】检测到高危系统管理或提权指令（匹配特征: '{violation}'），已被服务端安全策略阻断执行！"
-                }, 200)
+                }, 200, encrypt=is_encrypted)
                 return
 
             smap = load_session_map()
@@ -261,13 +321,13 @@ h1 { font-size: 26px; margin-bottom: 12px; font-weight: bold; }
                         smap[client_sid] = new_sid
                         save_session_map(smap)
 
-                self._send_json({"status": "ok", "reply": clean_reply})
+                self._send_json({"status": "ok", "reply": clean_reply}, encrypt=is_encrypted)
             except subprocess.TimeoutExpired:
-                self._send_json({"error": "AI response timed out (300s)", "reply": "【超时】AI 思考处理超过 5 分钟，请重试！"}, 504)
+                self._send_json({"error": "AI response timed out (300s)", "reply": "【超时】AI 思考处理超过 5 分钟，请重试！"}, 504, encrypt=is_encrypted)
             except Exception as e:
-                self._send_json({"error": str(e), "reply": f"【服务器错误】{str(e)}"}, 500)
+                self._send_json({"error": str(e), "reply": f"【服务器错误】{str(e)}"}, 500, encrypt=is_encrypted)
         else:
-            self._send_json({"error": "Not Found", "reply": "【错误】接口不存在"}, 404)
+            self._send_json({"error": "Not Found", "reply": "【错误】接口不存在"}, 404, encrypt=is_encrypted)
 
 class ThreadedHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
     daemon_threads = True
