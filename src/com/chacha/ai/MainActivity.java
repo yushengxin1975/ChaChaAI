@@ -8,9 +8,11 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.Manifest;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.AsyncTask;
+import android.widget.ImageView;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -284,6 +286,13 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(View v) {
                 showSettingsDialog();
+            }
+        });
+
+        tvTitle.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showAboutDialog();
             }
         });
 
@@ -1334,6 +1343,28 @@ public class MainActivity extends Activity {
         etFont.setText(String.valueOf(curFont));
         cbBuiltinIme.setChecked(prefs.getBoolean(KEY_ENABLE_BUILTIN_IME, true));
 
+        Button btnAbout = (Button) view.findViewById(R.id.btn_about);
+        TextView tvSettingsVer = (TextView) view.findViewById(R.id.tv_settings_version_info);
+
+        String appVerInfo = "v2.5 (Build 20260925)";
+        try {
+            PackageInfo pInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
+            appVerInfo = "v" + pInfo.versionName + " (Build " + pInfo.versionCode + ")";
+        } catch (Exception ignored) {}
+
+        if (tvSettingsVer != null) {
+            tvSettingsVer.setText("当前版本: " + appVerInfo);
+        }
+
+        if (btnAbout != null) {
+            btnAbout.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    showAboutDialog();
+                }
+            });
+        }
+
         builder.setView(view);
         builder.setPositiveButton("保存", new DialogInterface.OnClickListener() {
             @Override
@@ -1370,6 +1401,75 @@ public class MainActivity extends Activity {
         });
         builder.setNegativeButton("取消", null);
         builder.show();
+    }
+
+    private void showAboutDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        View view = LayoutInflater.from(this).inflate(R.layout.dialog_about, null);
+
+        TextView tvVer = (TextView) view.findViewById(R.id.tv_about_version);
+        TextView tvLog = (TextView) view.findViewById(R.id.tv_changelog_content);
+        Button btnClose = (Button) view.findViewById(R.id.btn_close_about);
+
+        String appVer = "v2.5 (Build 20260925)";
+        try {
+            PackageInfo pInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
+            appVer = "v" + pInfo.versionName + " (Build " + pInfo.versionCode + ")";
+        } catch (Exception ignored) {}
+
+        if (tvVer != null) {
+            tvVer.setText("版本: " + appVer);
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("【v2.5】最新版本\n");
+        sb.append("• 新增「关于」界面与版本号直观展示\n");
+        sb.append("• 内置完整更新日志 (Changelog)，支持随时查阅演进历史\n");
+        sb.append("• 设置中心与主界面顶部标题均可快捷呼出关于信息\n\n");
+
+        sb.append("【v2.4】\n");
+        sb.append("• 拼音自造词动态退火降级机制（连续2次未选中自动让位系统高频词）\n");
+        sb.append("• 词库管理与频次淘汰竞争优化\n");
+        sb.append("• 服务端安全护栏加固（防越权与危险命令过滤）\n");
+        sb.append("• 代码库全量脱敏与零秘钥隔离\n\n");
+
+        sb.append("【v2.3】\n");
+        sb.append("• 墨水屏全键盘拼音流内连贯造词（连续选字自动学习新词组）\n");
+        sb.append("• 动态规划切词算法优化与首音节单字保底\n");
+        sb.append("• 自造词多级存储同步持久化\n\n");
+
+        sb.append("【v2.2】\n");
+        sb.append("• 针对起点讯飞阅读器定制高对比度墨水屏黑白视觉配色\n");
+        sb.append("• 原生 Markdown 表格卡片自适应渲染\n");
+        sb.append("• 服务端命令白名单与沙箱安全防护\n\n");
+
+        sb.append("【v2.1】\n");
+        sb.append("• 内置物理键盘拼音输入法，外接蓝牙键盘打字不弹软键盘\n");
+        sb.append("• 拼音候选条支持数字 1-9 快速选词与翻页键\n\n");
+
+        sb.append("【v2.0】\n");
+        sb.append("• 多会话管理架构（新建会话、历史切换、自动保存）\n");
+        sb.append("• 墨水屏大字号调节与快速切换\n\n");
+
+        sb.append("【v1.0】\n");
+        sb.append("• 初版发布：原生轻量 AI 交互客户端\n");
+        sb.append("• 支持 HTC Sense 全键盘与基础对话\n");
+
+        if (tvLog != null) {
+            tvLog.setText(sb.toString());
+        }
+
+        builder.setView(view);
+        final AlertDialog dialog = builder.create();
+        if (btnClose != null) {
+            btnClose.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    dialog.dismiss();
+                }
+            });
+        }
+        dialog.show();
     }
 
     private void checkAndRequestStoragePermissions() {

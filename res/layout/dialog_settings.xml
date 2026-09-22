@@ -207,5 +207,37 @@
             android:hint="http://your-server-ip:80"
             android:singleLine="true" />
 
+        <!-- 关于与版本信息 -->
+        <TextView
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="关于与版本信息"
+            android:textStyle="bold"
+            android:textColor="#000000"
+            android:textSize="15sp" />
+
+        <Button
+            android:id="@+id/btn_about"
+            android:layout_width="fill_parent"
+            android:layout_height="38dp"
+            android:layout_marginTop="6dp"
+            android:text="关于 ChaCha AI (版本与更新日志)"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="@color/btn_eink_text"
+            android:background="@drawable/btn_eink" />
+
+        <TextView
+            android:id="@+id/tv_settings_version_info"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:layout_marginBottom="4dp"
+            android:text="当前版本: v2.5 (Build 20260925)"
+            android:textSize="12sp"
+            android:textColor="#888888"
+            android:gravity="center_horizontal" />
+
     </LinearLayout>
 </ScrollView>
