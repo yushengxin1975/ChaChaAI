@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingLeft="12dp"
+    android:paddingRight="12dp"
+    android:paddingTop="10dp"
+    android:paddingBottom="10dp"
+    android:background="#FFFFFF">
+
+    <!-- Session info: Click to switch -->
+    <LinearLayout
+        android:id="@+id/layout_session_click"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tv_session_title"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="会话标题"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#000000"
+            android:singleLine="true"
+            android:ellipsize="end" />
+
+        <TextView
+            android:id="@+id/tv_session_time"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="09-21 10:30"
+            android:textSize="12sp"
+            android:textColor="#666666" />
+    </LinearLayout>
+
+    <!-- Delete button -->
+    <Button
+        android:id="@+id/btn_delete_session"
+        android:layout_width="wrap_content"
+        android:layout_height="32dp"
+        android:minWidth="52dp"
+        android:layout_marginLeft="10dp"
+        android:text="删除"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:textColor="@color/btn_eink_text"
+        android:background="@drawable/btn_eink"
+        android:paddingLeft="8dp"
+        android:paddingRight="8dp"
+        android:gravity="center"
+        android:focusable="false" />
+</LinearLayout>

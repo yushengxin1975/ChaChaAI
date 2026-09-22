@@ -1,12 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="bg_dark">#121212</color>
-    <color name="topbar_bg">#1E1E1E</color>
-    <color name="user_tag">#4FC3F7</color>
-    <color name="ai_tag">#81C784</color>
-    <color name="text_white">#E0E0E0</color>
-    <color name="text_gray">#9E9E9E</color>
-    <color name="online_green">#00E676</color>
-    <color name="offline_red">#FF5252</color>
-    <color name="input_bg">#2A2A2A</color>
+    <!-- Kaleido 3 彩色墨水屏专属优雅护眼配色方案 -->
+    <color name="bg_screen">#F8FAFC</color>
+    <color name="topbar_bg">#F1F5F9</color>
+    <color name="bottombar_bg">#F1F5F9</color>
+    <color name="candidate_bg">#FFFDF0</color>
+    <color name="divider_color">#CBD5E1</color>
+    
+    <color name="text_black">#0F172A</color>
+    <color name="text_dark">#1E293B</color>
+    <color name="text_gray">#64748B</color>
+    <color name="text_hint">#94A3B8</color>
+    
+    <!-- 角色标签与气泡卡片色彩 -->
+    <color name="ai_bubble_bg">#F0F9FF</color>
+    <color name="ai_bubble_border">#BAE6FD</color>
+    <color name="ai_role_text">#0284C7</color>
+
+    <color name="user_bubble_bg">#F0FDF4</color>
+    <color name="user_bubble_border">#BBF7D0</color>
+    <color name="user_role_text">#16A34A</color>
+
+    <color name="system_bubble_bg">#FFFBEB</color>
+    <color name="system_role_text">#D97706</color>
+    
+    <!-- 状态指示灯（在线翠绿 / 离线深灰红） -->
+    <color name="online_status">#16A34A</color>
+    <color name="offline_status">#DC2626</color>
+    <color name="input_bg">#FFFFFF</color>
+
+    <!-- 顶部与功能按钮主题色 -->
+    <color name="btn_emerald_bg">#0D9488</color>
+    <color name="btn_emerald_pressed">#0F766E</color>
+    <color name="btn_indigo_bg">#4338CA</color>
+    <color name="btn_indigo_pressed">#3730A3</color>
+    <color name="btn_amber_bg">#D97706</color>
+    <color name="btn_amber_pressed">#B45309</color>
+    <color name="btn_purple_bg">#7C3AED</color>
+    <color name="btn_purple_pressed">#6D28D9</color>
+    <color name="btn_blue_bg">#0284C7</color>
+    <color name="btn_blue_pressed">#0369A1</color>
+
+    <color name="btn_text_white">#FFFFFF</color>
 </resources>

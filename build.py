@@ -59,18 +59,46 @@ if r3.returncode != 0:
 # 4. Package APK
 print('4. Packaging APK resources...')
 unsigned_apk = os.path.join(bin_dir, 'unsigned.apk')
-r4 = subprocess.run([aapt, 'package', '-f', '-M', manifest, '-S', res, '-I', android_jar, '-F', unsigned_apk], capture_output=True, encoding='utf-8', errors='replace')
+assets_dir = os.path.join(prj_dir, 'assets')
+pkg_cmd = [aapt, 'package', '-f', '-M', manifest, '-S', res, '-I', android_jar]
+if os.path.exists(assets_dir):
+    pkg_cmd += ['-A', assets_dir]
+pkg_cmd += ['-F', unsigned_apk]
+r4 = subprocess.run(pkg_cmd, capture_output=True, encoding='utf-8', errors='replace')
 if r4.returncode != 0:
     print('Package error:', r4.stderr)
     exit(1)
 
-# 5. Add classes.dex
+# 5. Add classes.dex, assets, and native libraries
 with zipfile.ZipFile(unsigned_apk, 'a') as z:
     z.write(os.path.join(bin_dir, 'classes.dex'), 'classes.dex')
+    if os.path.exists(assets_dir):
+        for root, dirs, files in os.walk(assets_dir):
+            for f in files:
+                full_path = os.path.join(root, f)
+                rel_path = os.path.relpath(full_path, prj_dir).replace('\\', '/')
+                if rel_path not in z.namelist():
+                    z.write(full_path, rel_path)
+    
+    # Pack native .so libraries under lib/<abi>/
+    libs_dir = os.path.join(prj_dir, 'libs')
+    if os.path.exists(libs_dir):
+        for root, dirs, files in os.walk(libs_dir):
+            for f in files:
+                if f.endswith('.so'):
+                    full_path = os.path.join(root, f)
+                    rel_to_libs = os.path.relpath(full_path, libs_dir).replace('\\', '/')
+                    # STRICTLY EXCLUDE arm64-v8a so Android runs in 32-bit mode where dict_pinyin.dat matches memory structures
+                    if 'arm64' in rel_to_libs:
+                        continue
+                    apk_lib_path = 'lib/' + rel_to_libs
+                    if apk_lib_path not in z.namelist():
+                        z.write(full_path, apk_lib_path, compress_type=zipfile.ZIP_STORED)
+                        print(f'Added native lib: {apk_lib_path}')
 
-# 6. Zipalign
+# 6. Zipalign (page-align uncompressed .so files)
 aligned_apk = os.path.join(bin_dir, 'aligned.apk')
-subprocess.run([zipalign, '-f', '4', unsigned_apk, aligned_apk], capture_output=True)
+subprocess.run([zipalign, '-f', '-p', '4', unsigned_apk, aligned_apk], capture_output=True)
 
 # 7. Keystore & Sign
 keystore_path = os.path.join(prj_dir, 'debug.keystore')
@@ -78,7 +106,7 @@ if not os.path.exists(keystore_path):
     subprocess.run([keytool, '-genkeypair', '-v', '-keystore', keystore_path, '-alias', 'debug', '-keyalg', 'RSA', '-keysize', '2048', '-validity', '10000', '-storepass', 'android', '-keypass', 'android', '-dname', 'CN=Android,O=Android,C=US'], capture_output=True)
 
 final_apk = os.path.join(prj_dir, 'ChaChaAI.apk')
-r7 = subprocess.run([apksigner, 'sign', '--ks', keystore_path, '--ks-key-alias', 'debug', '--ks-pass', 'pass:android', '--key-pass', 'pass:android', '--min-sdk-version', '10', '--v1-signing-enabled', 'true', '--v2-signing-enabled', 'false', '--out', final_apk, aligned_apk], shell=True, capture_output=True, encoding='utf-8', errors='replace')
+r7 = subprocess.run([apksigner, 'sign', '--ks', keystore_path, '--ks-key-alias', 'debug', '--ks-pass', 'pass:android', '--key-pass', 'pass:android', '--min-sdk-version', '10', '--v1-signing-enabled', 'true', '--v2-signing-enabled', 'true', '--out', final_apk, aligned_apk], shell=True, capture_output=True, encoding='utf-8', errors='replace')
 
 if r7.returncode != 0:
     print('Sign error:', r7.stderr)

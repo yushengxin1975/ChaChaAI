@@ -1,0 +1,308 @@
+package com.chacha.ai;
+
+import android.content.Context;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+
+/**
+ * 用户自造词组与自定义词库管理器
+ * - 支持用户自主录入专业词组、缩写、专有名词及其全拼/简拼声母
+ * - 持久化存储至内部 user_phrases.json
+ * - 结合全拼匹配与首字母简拼（如 dhjk -> 东航金控、sftcj -> 商发陶瓷基）
+ * - 智能按使用频率和最近选词时间排序置顶
+ */
+public class UserPhraseManager {
+    private static final String FILE_NAME = "user_phrases.json";
+    private static UserPhraseManager instance;
+
+    public static class Phrase {
+        public String word;
+        public String pinyin;
+        public String initials;
+        public int count;
+        public long timestamp;
+
+        public Phrase(String word, String pinyin, String initials, int count, long timestamp) {
+            this.word = word;
+            this.pinyin = pinyin;
+            this.initials = initials;
+            this.count = count;
+            this.timestamp = timestamp;
+        }
+    }
+
+    private final List<Phrase> phraseList = new ArrayList<Phrase>();
+    private boolean loaded = false;
+
+    private UserPhraseManager() {}
+
+    public static synchronized UserPhraseManager getInstance() {
+        if (instance == null) {
+            instance = new UserPhraseManager();
+        }
+        return instance;
+    }
+
+    public static List<File> getAllPhraseFiles(Context context) {
+        List<File> files = new ArrayList<File>();
+        if (context == null) return files;
+
+        // 1. 内部私有存储
+        try {
+            File intFile = new File(context.getFilesDir(), FILE_NAME);
+            files.add(intFile);
+        } catch (Exception ignored) {}
+
+        // 2. SD卡公共持久化存储（即便卸载重装、覆盖安装也不会丢失）
+        try {
+            File extRoot = android.os.Environment.getExternalStorageDirectory();
+            if (extRoot != null) {
+                File dir = new File(extRoot, "ChaChaAI");
+                if (!dir.exists()) dir.mkdirs();
+                if (dir.exists()) {
+                    files.add(new File(dir, FILE_NAME));
+                }
+            }
+        } catch (Exception ignored) {}
+
+        // 3. 外部应用私有存储
+        try {
+            File extApp = context.getExternalFilesDir(null);
+            if (extApp != null) {
+                files.add(new File(extApp, FILE_NAME));
+            }
+        } catch (Exception ignored) {}
+
+        return files;
+    }
+
+    public synchronized void syncStorage(Context context) {
+        if (context == null) return;
+        loaded = false;
+        load(context);
+    }
+
+    public synchronized void load(Context context) {
+        if (loaded || context == null) return;
+        phraseList.clear();
+
+        List<File> files = getAllPhraseFiles(context);
+        boolean anyLoaded = false;
+
+        for (File file : files) {
+            if (!file.exists() || file.length() < 2) continue;
+            try {
+                FileInputStream fis = new FileInputStream(file);
+                BufferedReader reader = new BufferedReader(new InputStreamReader(fis, "UTF-8"));
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    sb.append(line);
+                }
+                reader.close();
+                fis.close();
+
+                JSONArray arr = new JSONArray(sb.toString().trim());
+                for (int i = 0; i < arr.length(); i++) {
+                    JSONObject obj = arr.getJSONObject(i);
+                    String word = obj.optString("word", "");
+                    String pinyin = obj.optString("pinyin", "");
+                    String initials = obj.optString("initials", "");
+                    int count = obj.optInt("count", 1);
+                    long ts = obj.optLong("timestamp", 0);
+                    if (word.length() > 0) {
+                        boolean exists = false;
+                        for (Phrase p : phraseList) {
+                            if (p.word.equals(word)) {
+                                exists = true;
+                                if (count > p.count) p.count = count;
+                                if (ts > p.timestamp) p.timestamp = ts;
+                                break;
+                            }
+                        }
+                        if (!exists) {
+                            phraseList.add(new Phrase(word, pinyin, initials, count, ts));
+                        }
+                    }
+                }
+                anyLoaded = true;
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        sortPhrases();
+        loaded = true;
+
+        // 如果从外部存储恢复了词组，同步回写到所有存储路径
+        if (anyLoaded) {
+            save(context);
+        }
+    }
+
+    private void save(Context context) {
+        if (context == null) return;
+        try {
+            JSONArray arr = new JSONArray();
+            for (Phrase p : phraseList) {
+                JSONObject obj = new JSONObject();
+                obj.put("word", p.word);
+                obj.put("pinyin", p.pinyin);
+                obj.put("initials", p.initials);
+                obj.put("count", p.count);
+                obj.put("timestamp", p.timestamp);
+                arr.put(obj);
+            }
+            byte[] bytes = arr.toString().getBytes("UTF-8");
+            List<File> files = getAllPhraseFiles(context);
+            for (File file : files) {
+                try {
+                    FileOutputStream fos = new FileOutputStream(file);
+                    fos.write(bytes);
+                    fos.flush();
+                    fos.close();
+                } catch (Exception ignored) {}
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public synchronized void addPhrase(Context context, String word, String inputPinyin) {
+        if (word == null || word.trim().isEmpty()) return;
+        word = word.trim();
+        if (context == null) return;
+        load(context);
+
+        String clean = (inputPinyin != null) ? inputPinyin.toLowerCase().trim() : "";
+        String pinyin = clean;
+        String initials = clean;
+
+        // 如果包含逗号或空格分隔（如 "donghangjinkong, dhjk"）
+        if (clean.contains(",") || clean.contains(" ") || clean.contains(";")) {
+            String[] parts = clean.split("[, ;]+");
+            if (parts.length >= 2) {
+                if (parts[0].length() > parts[1].length()) {
+                    pinyin = parts[0].replaceAll("[^a-z]", "");
+                    initials = parts[1].replaceAll("[^a-z]", "");
+                } else {
+                    pinyin = parts[1].replaceAll("[^a-z]", "");
+                    initials = parts[0].replaceAll("[^a-z]", "");
+                }
+            } else if (parts.length == 1) {
+                pinyin = parts[0].replaceAll("[^a-z]", "");
+                initials = pinyin;
+            }
+        } else {
+            pinyin = clean.replaceAll("[^a-z]", "");
+            initials = PinyinSplitter.getInitials(pinyin);
+            if (initials.isEmpty()) {
+                initials = pinyin;
+            }
+        }
+
+        // 检查是否已存在同名词组，存在则更新拼音和频次
+        for (Phrase p : phraseList) {
+            if (p.word.equals(word)) {
+                if (!pinyin.isEmpty()) p.pinyin = pinyin;
+                if (!initials.isEmpty()) p.initials = initials;
+                p.count++;
+                p.timestamp = System.currentTimeMillis();
+                sortPhrases();
+                save(context);
+                return;
+            }
+        }
+
+        phraseList.add(new Phrase(word, pinyin, initials, 1, System.currentTimeMillis()));
+        sortPhrases();
+        save(context);
+    }
+
+    public synchronized void deletePhrase(Context context, String word) {
+        if (context == null || word == null) return;
+        load(context);
+        for (int i = 0; i < phraseList.size(); i++) {
+            if (phraseList.get(i).word.equals(word)) {
+                phraseList.remove(i);
+                save(context);
+                return;
+            }
+        }
+    }
+
+    public synchronized List<Phrase> getAllPhrases(Context context) {
+        if (context == null) return Collections.emptyList();
+        load(context);
+        return new ArrayList<Phrase>(phraseList);
+    }
+
+    public synchronized List<String> matchPhrases(Context context, String queryPinyin) {
+        if (context == null || queryPinyin == null || queryPinyin.trim().isEmpty()) {
+            return Collections.emptyList();
+        }
+        load(context);
+        String q = queryPinyin.toLowerCase().replaceAll("[^a-z]", "");
+        if (q.isEmpty()) return Collections.emptyList();
+
+        List<String> exactMatches = new ArrayList<String>();
+        List<String> prefixMatches = new ArrayList<String>();
+
+        for (Phrase p : phraseList) {
+            // 1. 完全精确匹配全拼或简拼（最高优先级）
+            if ((p.pinyin != null && p.pinyin.equals(q)) ||
+                (p.initials != null && p.initials.equals(q))) {
+                if (!exactMatches.contains(p.word)) {
+                    exactMatches.add(p.word);
+                }
+            }
+            // 2. 前缀匹配（次优先级）
+            else if ((p.pinyin != null && p.pinyin.startsWith(q)) ||
+                     (p.initials != null && p.initials.startsWith(q))) {
+                if (!exactMatches.contains(p.word) && !prefixMatches.contains(p.word)) {
+                    prefixMatches.add(p.word);
+                }
+            }
+        }
+
+        List<String> results = new ArrayList<String>(exactMatches);
+        results.addAll(prefixMatches);
+        return results;
+    }
+
+    public synchronized void recordUsage(Context context, String word) {
+        if (context == null || word == null) return;
+        load(context);
+        for (Phrase p : phraseList) {
+            if (p.word.equals(word)) {
+                p.count++;
+                p.timestamp = System.currentTimeMillis();
+                sortPhrases();
+                save(context);
+                return;
+            }
+        }
+    }
+
+    private void sortPhrases() {
+        Collections.sort(phraseList, new Comparator<Phrase>() {
+            @Override
+            public int compare(Phrase o1, Phrase o2) {
+                if (o1.count != o2.count) {
+                    return o2.count - o1.count;
+                }
+                return Long.compare(o2.timestamp, o1.timestamp);
+            }
+        });
+    }
+}

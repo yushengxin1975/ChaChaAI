@@ -2,121 +2,208 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="fill_parent"
     android:layout_height="wrap_content"
-    android:fillViewport="true">
+    android:fillViewport="true"
+    android:background="#FFFFFF">
 
     <LinearLayout
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="8dp">
+        android:padding="14dp">
 
-        <!-- 聊天字号放在最顶端，打开设置第一眼就能看到 -->
+        <!-- 聊天字号 -->
         <TextView
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:text="聊天字号大小 (点击快捷按钮)"
+            android:text="聊天显示字号 (点击快速切换)"
             android:textStyle="bold"
-            android:textColor="#4FC3F7"
-            android:textSize="13sp" />
+            android:textColor="#000000"
+            android:textSize="15sp" />
 
         <LinearLayout
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginTop="4dp">
+            android:layout_marginTop="6dp">
 
             <Button
                 android:id="@+id/btn_font_16"
                 android:layout_width="0dp"
-                android:layout_height="32dp"
+                android:layout_height="36dp"
                 android:layout_weight="1"
                 android:text="16"
-                android:textSize="11sp" />
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="@color/btn_eink_text"
+                android:background="@drawable/btn_eink" />
 
             <Button
                 android:id="@+id/btn_font_18"
                 android:layout_width="0dp"
-                android:layout_height="32dp"
+                android:layout_height="36dp"
                 android:layout_weight="1"
-                android:layout_marginLeft="2dp"
+                android:layout_marginLeft="4dp"
                 android:text="18"
-                android:textSize="11sp" />
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="@color/btn_eink_text"
+                android:background="@drawable/btn_eink" />
 
             <Button
                 android:id="@+id/btn_font_20"
                 android:layout_width="0dp"
-                android:layout_height="32dp"
+                android:layout_height="36dp"
                 android:layout_weight="1"
-                android:layout_marginLeft="2dp"
+                android:layout_marginLeft="4dp"
                 android:text="20"
-                android:textSize="11sp" />
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="@color/btn_eink_text"
+                android:background="@drawable/btn_eink" />
 
             <Button
                 android:id="@+id/btn_font_22"
                 android:layout_width="0dp"
-                android:layout_height="32dp"
+                android:layout_height="36dp"
                 android:layout_weight="1"
-                android:layout_marginLeft="2dp"
+                android:layout_marginLeft="4dp"
                 android:text="22"
-                android:textSize="11sp" />
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="@color/btn_eink_text"
+                android:background="@drawable/btn_eink" />
 
             <Button
                 android:id="@+id/btn_font_24"
                 android:layout_width="0dp"
-                android:layout_height="32dp"
+                android:layout_height="36dp"
                 android:layout_weight="1"
-                android:layout_marginLeft="2dp"
+                android:layout_marginLeft="4dp"
                 android:text="24"
-                android:textSize="11sp" />
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="@color/btn_eink_text"
+                android:background="@drawable/btn_eink" />
 
             <Button
                 android:id="@+id/btn_font_28"
                 android:layout_width="0dp"
-                android:layout_height="32dp"
+                android:layout_height="36dp"
                 android:layout_weight="1"
-                android:layout_marginLeft="2dp"
+                android:layout_marginLeft="4dp"
                 android:text="28"
-                android:textSize="11sp" />
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="@color/btn_eink_text"
+                android:background="@drawable/btn_eink" />
         </LinearLayout>
 
         <EditText
             android:id="@+id/et_font_size"
             android:layout_width="fill_parent"
-            android:layout_height="34dp"
-            android:layout_marginTop="3dp"
-            android:textSize="13sp"
+            android:layout_height="38dp"
+            android:layout_marginTop="6dp"
+            android:textSize="15sp"
+            android:textColor="#000000"
+            android:background="@drawable/edittext_eink"
+            android:paddingLeft="10dp"
             android:inputType="number"
             android:singleLine="true" />
+
+        <!-- 蓝牙键盘与输入法设置 -->
+        <TextView
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:text="物理键盘与中文输入法"
+            android:textStyle="bold"
+            android:textColor="#000000"
+            android:textSize="15sp" />
+
+        <CheckBox
+            android:id="@+id/cb_builtin_ime"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="启用内置物理键盘拼音输入法 (推荐：彻底不弹软键盘)"
+            android:textSize="14sp"
+            android:textColor="#000000"
+            android:checked="true" />
+
+        <TextView
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="说明：开启后，外接蓝牙键盘打拼音直接在输入框上方出现中文候选条（空格/数字1-5选词，-和=翻页，Enter上屏英文，点[拼]切英文）。不弹出虚拟键盘，完美避免遮挡屏幕。"
+            android:textSize="12sp"
+            android:textColor="#666666"
+            android:lineSpacingMultiplier="1.15" />
+
+        <Button
+            android:id="@+id/btn_open_sys_settings"
+            android:layout_width="fill_parent"
+            android:layout_height="36dp"
+            android:layout_marginTop="6dp"
+            android:text="尝试打开系统物理键盘/输入法设置"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="@color/btn_eink_text"
+            android:background="@drawable/btn_eink" />
+
+        <Button
+            android:id="@+id/btn_manage_user_phrases"
+            android:layout_width="fill_parent"
+            android:layout_height="36dp"
+            android:layout_marginTop="8dp"
+            android:text="查看与管理自造词/专业词库 (★)"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="@color/btn_eink_text"
+            android:background="@drawable/btn_eink" />
 
         <!-- 认证 Token -->
         <TextView
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="认证 Token (秘钥)"
-            android:textSize="12sp" />
+            android:layout_marginTop="14dp"
+            android:text="认证 Token (预设密钥)"
+            android:textStyle="bold"
+            android:textColor="#000000"
+            android:textSize="15sp" />
 
         <EditText
             android:id="@+id/et_token"
             android:layout_width="fill_parent"
-            android:layout_height="34dp"
-            android:textSize="12sp"
-            android:hint="请输入访问密钥"
+            android:layout_height="38dp"
+            android:layout_marginTop="4dp"
+            android:textSize="14sp"
+            android:textColor="#000000"
+            android:textColorHint="#888888"
+            android:background="@drawable/edittext_eink"
+            android:paddingLeft="10dp"
+            android:hint="请输入认证密钥 (Token)"
             android:singleLine="true" />
 
         <!-- 服务器地址 -->
         <TextView
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="14dp"
             android:text="服务器地址"
-            android:textSize="12sp" />
+            android:textStyle="bold"
+            android:textColor="#000000"
+            android:textSize="15sp" />
 
         <EditText
             android:id="@+id/et_server_url"
             android:layout_width="fill_parent"
-            android:layout_height="34dp"
-            android:textSize="12sp"
+            android:layout_height="38dp"
+            android:layout_marginTop="4dp"
+            android:textSize="14sp"
+            android:textColor="#000000"
+            android:textColorHint="#888888"
+            android:background="@drawable/edittext_eink"
+            android:paddingLeft="10dp"
             android:hint="http://your-server-ip:80"
             android:singleLine="true" />
 

@@ -3,12 +3,12 @@
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
     android:orientation="vertical"
-    android:background="@color/bg_dark">
+    android:background="@color/bg_screen">
 
-    <!-- Top Bar -->
+    <!-- Top Bar: 包含状态、标题、新对话、历史记录、设置 -->
     <LinearLayout
         android:layout_width="fill_parent"
-        android:layout_height="34dp"
+        android:layout_height="48dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingLeft="8dp"
@@ -20,8 +20,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="●"
-            android:textSize="14sp"
-            android:textColor="@color/offline_red" />
+            android:textSize="16sp"
+            android:textColor="@color/offline_status" />
 
         <TextView
             android:id="@+id/tv_title"
@@ -29,30 +29,63 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginLeft="6dp"
-            android:text="ChaCha AI (GLM-5.3)"
-            android:textSize="13sp"
+            android:text="ChaCha AI"
+            android:textSize="15sp"
             android:textStyle="bold"
-            android:textColor="@color/text_white" />
+            android:textColor="@color/text_black"
+            android:singleLine="true"
+            android:ellipsize="end" />
 
         <Button
             android:id="@+id/btn_new"
             android:layout_width="wrap_content"
-            android:layout_height="28dp"
+            android:layout_height="36dp"
+            android:minWidth="60dp"
             android:text="@string/new_chat"
-            android:textSize="11sp"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="@color/btn_text_white"
+            android:background="@drawable/btn_emerald"
             android:paddingLeft="8dp"
-            android:paddingRight="8dp" />
+            android:paddingRight="8dp"
+            android:gravity="center" />
+
+        <Button
+            android:id="@+id/btn_history"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:minWidth="50dp"
+            android:layout_marginLeft="6dp"
+            android:text="@string/history"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="@color/btn_text_white"
+            android:background="@drawable/btn_indigo"
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp"
+            android:gravity="center" />
 
         <Button
             android:id="@+id/btn_settings"
             android:layout_width="wrap_content"
-            android:layout_height="28dp"
-            android:layout_marginLeft="4dp"
+            android:layout_height="36dp"
+            android:minWidth="50dp"
+            android:layout_marginLeft="6dp"
             android:text="@string/settings"
-            android:textSize="11sp"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="@color/btn_text_white"
+            android:background="@drawable/btn_purple"
             android:paddingLeft="8dp"
-            android:paddingRight="8dp" />
+            android:paddingRight="8dp"
+            android:gravity="center" />
     </LinearLayout>
+
+    <!-- Top Divider Line -->
+    <View
+        android:layout_width="fill_parent"
+        android:layout_height="1dp"
+        android:background="@color/divider_color" />
 
     <!-- Chat Messages List -->
     <ListView
@@ -60,46 +93,284 @@
         android:layout_width="fill_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:divider="@null"
-        android:dividerHeight="8dp"
-        android:padding="6dp"
-        android:transcriptMode="alwaysScroll"
-        android:stackFromBottom="true"
-        android:cacheColorHint="#00000000" />
+        android:divider="@color/divider_color"
+        android:dividerHeight="1dp"
+        android:paddingLeft="10dp"
+        android:paddingRight="10dp"
+        android:paddingTop="6dp"
+        android:transcriptMode="disabled"
+        android:stackFromBottom="false"
+        android:scrollbars="vertical"
+        android:fadeScrollbars="false"
+        android:cacheColorHint="#00000000"
+        android:background="@color/bg_screen" />
+
+    <!-- Bottom Divider Line -->
+    <View
+        android:layout_width="fill_parent"
+        android:layout_height="1dp"
+        android:background="@color/divider_color" />
+
+    <!-- Candidate Bar (墨水屏物理键盘拼音候选词条，正在打拼音时显示) -->
+    <LinearLayout
+        android:id="@+id/ll_candidate_bar"
+        android:layout_width="fill_parent"
+        android:layout_height="42dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="#FFFFFF"
+        android:paddingLeft="6dp"
+        android:paddingRight="6dp"
+        android:visibility="gone">
+
+        <!-- 拼音标签（黑底白字反色醒目） -->
+        <TextView
+            android:id="@+id/tv_composing"
+            android:layout_width="wrap_content"
+            android:layout_height="28dp"
+            android:background="#000000"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:paddingLeft="6dp"
+            android:paddingRight="6dp"
+            android:text="拼:" />
+
+        <!-- 紧凑候选词滑动容器（自适应宽度，超长支持水平滑动，Prev/Next按键永不被挤出） -->
+        <HorizontalScrollView
+            android:layout_width="0dp"
+            android:layout_height="fill_parent"
+            android:layout_weight="1"
+            android:scrollbars="none"
+            android:fadingEdge="none"
+            android:overScrollMode="never"
+            android:layout_marginLeft="6dp"
+            android:layout_marginRight="4dp">
+
+            <LinearLayout
+                android:id="@+id/ll_candidate_items"
+                android:layout_width="wrap_content"
+                android:layout_height="fill_parent"
+                android:orientation="horizontal"
+                android:gravity="center_vertical|left">
+
+                <TextView
+                    android:id="@+id/tv_cand_1"
+                    android:layout_width="wrap_content"
+                    android:layout_height="fill_parent"
+                    android:gravity="center"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="#000000"
+                    android:paddingLeft="8dp"
+                    android:paddingRight="12dp" />
+
+                <TextView
+                    android:id="@+id/tv_cand_2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="fill_parent"
+                    android:gravity="center"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="#000000"
+                    android:paddingLeft="8dp"
+                    android:paddingRight="12dp" />
+
+                <TextView
+                    android:id="@+id/tv_cand_3"
+                    android:layout_width="wrap_content"
+                    android:layout_height="fill_parent"
+                    android:gravity="center"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="#000000"
+                    android:paddingLeft="8dp"
+                    android:paddingRight="12dp" />
+
+                <TextView
+                    android:id="@+id/tv_cand_4"
+                    android:layout_width="wrap_content"
+                    android:layout_height="fill_parent"
+                    android:gravity="center"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="#000000"
+                    android:paddingLeft="8dp"
+                    android:paddingRight="12dp" />
+
+                <TextView
+                    android:id="@+id/tv_cand_5"
+                    android:layout_width="wrap_content"
+                    android:layout_height="fill_parent"
+                    android:gravity="center"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="#000000"
+                    android:paddingLeft="8dp"
+                    android:paddingRight="12dp" />
+
+                <TextView
+                    android:id="@+id/tv_cand_6"
+                    android:layout_width="wrap_content"
+                    android:layout_height="fill_parent"
+                    android:gravity="center"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="#000000"
+                    android:paddingLeft="8dp"
+                    android:paddingRight="12dp" />
+
+                <TextView
+                    android:id="@+id/tv_cand_7"
+                    android:layout_width="wrap_content"
+                    android:layout_height="fill_parent"
+                    android:gravity="center"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="#000000"
+                    android:paddingLeft="8dp"
+                    android:paddingRight="12dp" />
+
+                <TextView
+                    android:id="@+id/tv_cand_8"
+                    android:layout_width="wrap_content"
+                    android:layout_height="fill_parent"
+                    android:gravity="center"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="#000000"
+                    android:paddingLeft="8dp"
+                    android:paddingRight="12dp" />
+
+                <TextView
+                    android:id="@+id/tv_cand_9"
+                    android:layout_width="wrap_content"
+                    android:layout_height="fill_parent"
+                    android:gravity="center"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="#000000"
+                    android:paddingLeft="8dp"
+                    android:paddingRight="12dp" />
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <Button
+            android:id="@+id/btn_cand_prev"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:text="◀"
+            android:textSize="11sp"
+            android:textColor="@color/btn_text_white"
+            android:background="@drawable/btn_indigo"
+            android:gravity="center"
+            android:padding="0dp" />
+
+        <Button
+            android:id="@+id/btn_cand_next"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginLeft="4dp"
+            android:text="▶"
+            android:textSize="11sp"
+            android:textColor="@color/btn_text_white"
+            android:background="@drawable/btn_indigo"
+            android:gravity="center"
+            android:padding="0dp" />
+    </LinearLayout>
+
+    <!-- Candidate Divider Line -->
+    <View
+        android:id="@+id/v_candidate_divider"
+        android:layout_width="fill_parent"
+        android:layout_height="1dp"
+        android:background="@color/divider_color"
+        android:visibility="gone" />
 
     <!-- Bottom Input Bar -->
     <LinearLayout
         android:layout_width="fill_parent"
-        android:layout_height="40dp"
+        android:layout_height="wrap_content"
+        android:minHeight="52dp"
         android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingLeft="6dp"
-        android:paddingRight="6dp"
-        android:paddingTop="2dp"
-        android:paddingBottom="2dp"
-        android:background="@color/topbar_bg">
+        android:gravity="bottom"
+        android:paddingLeft="8dp"
+        android:paddingRight="8dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp"
+        android:background="@color/bottombar_bg">
 
-        <EditText
+        <!-- 键盘中/英输入模式切换按钮 -->
+        <Button
+            android:id="@+id/btn_ime_mode"
+            android:layout_width="38dp"
+            android:layout_height="40dp"
+            android:text="拼"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="@color/btn_text_white"
+            android:background="@drawable/btn_cyan"
+            android:gravity="center"
+            android:padding="0dp"
+            android:layout_gravity="bottom"
+            android:layout_marginBottom="1dp" />
+
+        <com.chacha.ai.EinkEditText
             android:id="@+id/et_input"
             android:layout_width="0dp"
-            android:layout_height="34dp"
+            android:layout_height="wrap_content"
+            android:minHeight="40dp"
+            android:maxHeight="120dp"
             android:layout_weight="1"
-            android:background="@color/input_bg"
-            android:textColor="@color/text_white"
-            android:textSize="15sp"
-            android:paddingLeft="8dp"
-            android:paddingRight="8dp"
+            android:layout_marginLeft="6dp"
+            android:background="@drawable/edittext_color"
+            android:textColor="@color/text_black"
+            android:textSize="16sp"
+            android:paddingLeft="10dp"
+            android:paddingRight="10dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
             android:hint="@string/input_hint"
-            android:textColorHint="@color/text_gray"
-            android:singleLine="true"
+            android:textColorHint="@color/text_hint"
+            android:singleLine="false"
+            android:inputType="textMultiLine"
+            android:scrollbars="vertical"
+            android:fadeScrollbars="false"
+            android:cursorVisible="true"
+            android:textCursorDrawable="@null"
             android:imeOptions="actionSend" />
+
+        <!-- 呼出系统软键盘备用按钮（触屏使用时点击可弹出系统键盘） -->
+        <Button
+            android:id="@+id/btn_soft_kbd"
+            android:layout_width="38dp"
+            android:layout_height="40dp"
+            android:layout_marginLeft="6dp"
+            android:text="⌨"
+            android:textSize="15sp"
+            android:textColor="@color/btn_eink_text"
+            android:background="@drawable/btn_eink"
+            android:gravity="center"
+            android:padding="0dp"
+            android:layout_gravity="bottom"
+            android:layout_marginBottom="1dp" />
 
         <Button
             android:id="@+id/btn_send"
-            android:layout_width="60dp"
-            android:layout_height="34dp"
-            android:layout_marginLeft="4dp"
+            android:layout_width="wrap_content"
+            android:minWidth="60dp"
+            android:layout_height="40dp"
+            android:layout_marginLeft="6dp"
             android:text="@string/send"
-            android:textSize="13sp" />
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:textColor="@color/btn_text_white"
+            android:background="@drawable/btn_blue"
+            android:paddingLeft="10dp"
+            android:paddingRight="10dp"
+            android:gravity="center"
+            android:layout_gravity="bottom"
+            android:layout_marginBottom="1dp" />
     </LinearLayout>
 </LinearLayout>

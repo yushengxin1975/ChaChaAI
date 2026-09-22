@@ -3,6 +3,7 @@
     <string name="app_name">ChaCha AI</string>
     <string name="send">发送</string>
     <string name="new_chat">新对话</string>
+    <string name="history">历史</string>
     <string name="settings">设置</string>
     <string name="input_hint">输入问题... (物理回车直接发送)</string>
 </resources>
